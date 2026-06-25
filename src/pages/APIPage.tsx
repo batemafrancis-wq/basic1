@@ -113,7 +113,6 @@ export default function APIPage() {
   const [testResult, setTestResult] = useState<Record<string, string>>({});
 
   const card = `rounded-2xl border p-5 ${isDarkMode ? 'bg-[#1E293B] border-slate-700/60' : 'bg-white border-slate-200/60'} shadow-sm`;
-  const label = `text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`;
   const muted = `text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`;
 
   const copyCode = () => {

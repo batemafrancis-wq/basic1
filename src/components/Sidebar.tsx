@@ -26,11 +26,10 @@ export default function Sidebar() {
     <motion.aside
       animate={{ width: sidebarCollapsed ? 72 : 240 }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
-      className={`relative flex flex-col h-screen z-30 flex-shrink-0 ${
-        isDarkMode
-          ? 'bg-[#0F172A] border-r border-slate-800'
-          : 'bg-white border-r border-slate-100'
-      } shadow-xl`}
+      className={`relative flex flex-col h-screen z-30 flex-shrink-0 ${isDarkMode
+        ? 'bg-[#0F172A] border-r border-slate-800'
+        : 'bg-white border-r border-slate-100'
+        } shadow-xl`}
     >
       {/* Logo */}
       <div className={`flex items-center gap-3 px-4 py-5 border-b ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
@@ -57,11 +56,10 @@ export default function Sidebar() {
       {/* Collapse Toggle */}
       <button
         onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-        className={`absolute -right-3 top-20 w-6 h-6 rounded-full border flex items-center justify-center z-50 shadow-md transition-all ${
-          isDarkMode
-            ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
-            : 'bg-white border-slate-200 text-slate-400 hover:text-slate-700'
-        }`}
+        className={`absolute -right-3 top-20 w-6 h-6 rounded-full border flex items-center justify-center z-50 shadow-md transition-all ${isDarkMode
+          ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+          : 'bg-white border-slate-200 text-slate-400 hover:text-slate-700'
+          }`}
       >
         {sidebarCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
       </button>
@@ -73,6 +71,7 @@ export default function Sidebar() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
+            data-tutorial="ai-copilot-banner"
             className="mx-3 mt-4 p-3 rounded-xl bg-gradient-to-r from-[#2563EB]/10 to-[#10B981]/10 border border-[#2563EB]/20"
           >
             <div className="flex items-center gap-2">
@@ -99,13 +98,13 @@ export default function Sidebar() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.05 }}
               onClick={() => setActivePage(item.page)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative ${
-                isActive
-                  ? 'bg-gradient-to-r from-[#2563EB] to-[#10B981] text-white shadow-lg shadow-blue-500/25'
-                  : isDarkMode
+              data-tutorial={`nav-${item.page}`}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative ${isActive
+                ? 'bg-gradient-to-r from-[#2563EB] to-[#10B981] text-white shadow-lg shadow-blue-500/25'
+                : isDarkMode
                   ? 'text-slate-400 hover:text-white hover:bg-slate-800'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
+                }`}
             >
               <item.icon className={`w-4.5 h-4.5 flex-shrink-0 ${isActive ? 'text-white' : ''}`} style={{ width: '18px', height: '18px' }} />
               <AnimatePresence>
@@ -126,9 +125,8 @@ export default function Sidebar() {
                 </span>
               )}
               {sidebarCollapsed && (
-                <div className={`absolute left-full ml-2 px-2 py-1 rounded-lg text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 ${
-                  isDarkMode ? 'bg-slate-700 text-white' : 'bg-slate-900 text-white'
-                }`}>
+                <div className={`absolute left-full ml-2 px-2 py-1 rounded-lg text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 ${isDarkMode ? 'bg-slate-700 text-white' : 'bg-slate-900 text-white'
+                  }`}>
                   {item.label}
                 </div>
               )}
@@ -141,9 +139,8 @@ export default function Sidebar() {
       <div className={`p-3 border-t space-y-1 ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
         <button
           onClick={() => { setTutorialActive(true); setTutorialStep(0); }}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-            isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-          }`}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
         >
           <HelpCircle style={{ width: '18px', height: '18px' }} className="flex-shrink-0" />
           <AnimatePresence>
@@ -157,9 +154,8 @@ export default function Sidebar() {
 
         <button
           onClick={() => setChatOpen(!isChatOpen)}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-            isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-          }`}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
         >
           <Bell style={{ width: '18px', height: '18px' }} className="flex-shrink-0" />
           <AnimatePresence>

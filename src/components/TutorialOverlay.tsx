@@ -1,126 +1,324 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useEffect } from 'react';
-import { X, ArrowRight, ArrowLeft, Sparkles } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { X, ArrowRight, ArrowLeft, Sparkles, MousePointer2 } from 'lucide-react';
 import { useDashboardStore } from '../store/dashboardStore';
 
-const steps = [
+// ── Step definitions ──────────────────────────────────────────────────────────
+// selector: data-tutorial="..." attribute value of the target element
+// If null, the tooltip is centred (no spotlight / cursor travel).
+const STEPS = [
   {
-    id: 'period-selector',
+    selector: 'nav-dashboard',
+    title: '🗺️ Navigation Sidebar',
+    description: 'Every section of EgoSMS is one click away here. The active page is highlighted with a blue-green gradient. Try clicking any item to jump straight there.',
+    clickLabel: 'Navigate to Dashboard',
+  },
+  {
+    selector: 'ai-copilot-banner',
+    title: '⚡ AI Copilot — Always On',
+    description: "Your AI Copilot monitors every campaign in real-time, 24/7. It surfaces anomalies, optimal send-time windows, and growth opportunities before you even notice them.",
+    clickLabel: 'Highlight Copilot',
+  },
+  {
+    selector: 'period-selector',
     title: '📅 The Date Engine',
-    description: 'Use these buttons to filter ALL charts simultaneously. Click "YTD" to see your full year performance — watch every chart update instantly with smooth animations!',
-    position: { top: '80px', left: '50%', transform: 'translateX(-50%)' },
-    highlight: 'date-period-selector',
-    arrowDir: 'up',
+    description: 'Clicking MTD, YTD, or 90D instantly refreshes every chart and KPI on screen simultaneously. Watch the numbers animate as the data pivots.',
+    clickLabel: 'Click Period Selector',
   },
   {
-    id: 'kpi-cards',
-    title: '📊 Live KPI Sparklines',
-    description: 'Hover over any KPI card to reveal a 6-month sparkline trend. Green arrows = growth, red = decline. Click the % badge to see the full breakdown of what drove the change.',
-    position: { top: '220px', left: '60px' },
-    arrowDir: 'none',
+    selector: 'nav-send-sms',
+    title: '📤 Send SMS',
+    description: 'Compose single, bulk, custom or scheduled messages. Preview them in the live phone mockup, estimate costs before sending, and let AI suggest better copy.',
+    clickLabel: 'Go to Send SMS',
   },
   {
-    id: 'ai-insights',
-    title: '🤖 AI Copilot Insights',
-    description: 'Your AI Copilot monitors campaigns 24/7 and surfaces intelligent recommendations here — anomaly detection, optimal send times, and growth opportunities.',
-    position: { top: '220px', right: '60px' },
-    arrowDir: 'none',
+    selector: 'nav-analytics',
+    title: '📊 Analytics & Insights',
+    description: 'Drill into delivery rates by network, spot anomalies, and let the AI summarise what changed and why — all from one screen.',
+    clickLabel: 'Open Analytics',
   },
   {
-    id: 'chatbot',
+    selector: 'nav-reports',
+    title: '📄 Reports',
+    description: 'Export delivery, campaign, billing, and network reports as PDF, CSV, or XLSX. Set up automatic email schedules so you never miss a review.',
+    clickLabel: 'Open Reports',
+  },
+  {
+    selector: null,
     title: '💬 EgoBot AI Assistant',
-    description: 'Click the chat bubble in the bottom-right to open EgoBot — your context-aware AI assistant. It can check balances, send test messages, analyze your campaigns, and more!',
-    position: { bottom: '100px', right: '80px' },
-    arrowDir: 'down',
+    description: 'The chat bubble in the bottom-right corner opens EgoBot — your context-aware assistant. It reads your live data and can connect you to human support in one tap.',
+    clickLabel: null,
   },
-];
+] as const;
 
+type Step = typeof STEPS[number];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function getTargetRect(selector: string | null): DOMRect | null {
+  if (!selector) return null;
+  const el = document.querySelector(`[data-tutorial="${selector}"]`);
+  return el ? el.getBoundingClientRect() : null;
+}
+
+const PAD = 10; // spotlight padding
+
+// ── Component ─────────────────────────────────────────────────────────────────
 export default function TutorialOverlay() {
-  const { isTutorialActive, setTutorialActive, tutorialStep, setTutorialStep, isDarkMode } = useDashboardStore();
-  const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
-  const [showCursor, setShowCursor] = useState(false);
+  const {
+    isTutorialActive, setTutorialActive,
+    tutorialStep, setTutorialStep,
+    isDarkMode, setActivePage,
+  } = useDashboardStore();
 
-  const step = steps[tutorialStep];
+  const step: Step = STEPS[tutorialStep];
 
+  // Target rect state — recalculated on step change & resize
+  const [rect, setRect] = useState<DOMRect | null>(null);
+
+  // Cursor animation state
+  const [cursorPos, setCursorPos] = useState({ x: -100, y: -100 });
+  const [showRipple, setShowRipple] = useState(false);
+  const cursorReady = useRef(false);
+
+  const calcRect = useCallback(() => {
+    const r = getTargetRect(step.selector);
+    setRect(r);
+    return r;
+  }, [step]);
+
+  // On step change: compute rect then animate cursor to centre of target
   useEffect(() => {
     if (!isTutorialActive) return;
+    cursorReady.current = false;
+    setShowRipple(false);
 
-    // Animate cursor to target location
-    setShowCursor(true);
-    const targets: Record<number, { x: number; y: number }> = {
-      0: { x: window.innerWidth / 2, y: 88 },
-      1: { x: 280, y: 280 },
-      2: { x: window.innerWidth - 200, y: 280 },
-      3: { x: window.innerWidth - 80, y: window.innerHeight - 100 },
+    // Small delay to let React paint the new tooltip position first
+    const t1 = setTimeout(() => {
+      const r = calcRect();
+      if (r) {
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+
+        // Start cursor off to the side so the travel is visible
+        setCursorPos({ x: cx - 120, y: cy + 80 });
+
+        const t2 = setTimeout(() => {
+          setCursorPos({ x: cx, y: cy });
+          const t3 = setTimeout(() => {
+            setShowRipple(true);
+            cursorReady.current = true;
+          }, 700);
+          return () => clearTimeout(t3);
+        }, 50);
+        return () => clearTimeout(t2);
+      } else {
+        // No target — park cursor off-screen
+        setCursorPos({ x: -200, y: -200 });
+      }
+    }, 200);
+
+    return () => clearTimeout(t1);
+  }, [tutorialStep, isTutorialActive, calcRect]);
+
+  // Resize / scroll recalc
+  useEffect(() => {
+    if (!isTutorialActive) return;
+    const handler = () => calcRect();
+    window.addEventListener('resize', handler);
+    window.addEventListener('scroll', handler, true);
+    return () => {
+      window.removeEventListener('resize', handler);
+      window.removeEventListener('scroll', handler, true);
     };
+  }, [isTutorialActive, calcRect]);
 
-    const target = targets[tutorialStep];
-    if (target) {
-      setCursorPos(target);
+  const goNext = () => {
+    if (tutorialStep < STEPS.length - 1) {
+      setTutorialStep(tutorialStep + 1);
+    } else {
+      setTutorialActive(false);
     }
-  }, [tutorialStep, isTutorialActive]);
+  };
+
+  const goBack = () => setTutorialStep(tutorialStep - 1);
 
   if (!isTutorialActive) return null;
+
+  // Spotlight geometry
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const spotX = rect ? rect.left - PAD : W / 2 - 1;
+  const spotY = rect ? rect.top - PAD : H / 2 - 1;
+  const spotW = rect ? rect.width + PAD * 2 : 2;
+  const spotH = rect ? rect.height + PAD * 2 : 2;
+
+  // Tooltip positioning: prefer below, fallback above
+  const tooltipW = 320;
+  let tooltipLeft = rect ? Math.min(rect.left + rect.width / 2 - tooltipW / 2, W - tooltipW - 16) : W / 2 - tooltipW / 2;
+  tooltipLeft = Math.max(16, tooltipLeft);
+  const belowY = rect ? rect.bottom + PAD + 12 : H / 2 - 100;
+  const aboveY = rect ? rect.top - PAD - 12 - 260 : H / 2 - 100;
+  const tooltipTop = (belowY + 260 < H - 20) ? belowY : aboveY;
+  // Arrow direction
+  const arrowDown = tooltipTop === aboveY;
 
   return (
     <AnimatePresence>
       <motion.div
+        key="tutorial-root"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-[100] pointer-events-none"
       >
-        {/* Dark overlay */}
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+        {/* ── SVG spotlight mask ─────────────────────────────────────────── */}
+        <svg
+          className="absolute inset-0 w-full h-full"
+          style={{ pointerEvents: 'none' }}
+        >
+          <defs>
+            <mask id="spotlight-mask">
+              <rect width={W} height={H} fill="white" />
+              <motion.rect
+                animate={{ x: spotX, y: spotY, width: spotW, height: spotH }}
+                transition={{ duration: 0.45, ease: 'easeInOut' }}
+                rx={12}
+                fill="black"
+              />
+            </mask>
+          </defs>
+          <rect
+            width={W}
+            height={H}
+            fill="rgba(0,0,0,0.62)"
+            mask="url(#spotlight-mask)"
+          />
+        </svg>
 
-        {/* Animated Cursor */}
-        {showCursor && (
+        {/* ── Spotlight border ring ──────────────────────────────────────── */}
+        {rect && (
           <motion.div
-            animate={{ x: cursorPos.x, y: cursorPos.y }}
-            transition={{ duration: 1, ease: 'easeInOut' }}
-            className="absolute z-[110] pointer-events-none"
-            style={{ left: 0, top: 0 }}
+            animate={{
+              left: spotX,
+              top: spotY,
+              width: spotW,
+              height: spotH,
+            }}
+            transition={{ duration: 0.45, ease: 'easeInOut' }}
+            className="absolute rounded-xl pointer-events-none"
+            style={{
+              boxShadow: '0 0 0 2px rgba(37,99,235,0.9), 0 0 24px 4px rgba(37,99,235,0.35)',
+            }}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="drop-shadow-2xl">
-              <path d="M4 2L4 18L8 14L11 20L13.5 19L10.5 13L16 13L4 2Z" fill="white" stroke="#2563EB" strokeWidth="1.5" />
-            </svg>
-            <motion.div
-              animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-              className="absolute -inset-2 rounded-full bg-[#2563EB]/20"
-            />
+            {/* Animated corner ticks */}
+            {[
+              'top-0 left-0 border-t-2 border-l-2 rounded-tl-xl',
+              'top-0 right-0 border-t-2 border-r-2 rounded-tr-xl',
+              'bottom-0 left-0 border-b-2 border-l-2 rounded-bl-xl',
+              'bottom-0 right-0 border-b-2 border-r-2 rounded-br-xl',
+            ].map((cls, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.3 + i * 0.06 }}
+                className={`absolute w-4 h-4 border-[#2563EB] ${cls}`}
+              />
+            ))}
           </motion.div>
         )}
 
-        {/* Step Tooltip */}
+        {/* ── Animated cursor ────────────────────────────────────────────── */}
+        <motion.div
+          animate={{ left: cursorPos.x - 4, top: cursorPos.y - 2 }}
+          transition={{ duration: 0.65, ease: [0.25, 0.46, 0.45, 0.94] }}
+          className="absolute z-[115] pointer-events-none"
+          style={{ willChange: 'left, top' }}
+        >
+          <MousePointer2
+            className="w-6 h-6 drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
+            fill="white"
+            stroke="#1d4ed8"
+            strokeWidth={1.5}
+          />
+          {/* Click ripple */}
+          <AnimatePresence>
+            {showRipple && (
+              <>
+                <motion.div
+                  key="r1"
+                  initial={{ scale: 0.3, opacity: 0.8 }}
+                  animate={{ scale: 2.8, opacity: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.6, ease: 'easeOut' }}
+                  className="absolute inset-0 rounded-full bg-[#2563EB]/50 -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: '50%', top: '50%', width: 24, height: 24 }}
+                />
+                <motion.div
+                  key="r2"
+                  initial={{ scale: 0.3, opacity: 0.6 }}
+                  animate={{ scale: 2, opacity: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.45, ease: 'easeOut', delay: 0.1 }}
+                  className="absolute inset-0 rounded-full bg-[#10B981]/50 -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: '50%', top: '50%', width: 24, height: 24 }}
+                />
+              </>
+            )}
+          </AnimatePresence>
+        </motion.div>
+
+        {/* ── Tooltip card ───────────────────────────────────────────────── */}
         <motion.div
           key={tutorialStep}
-          initial={{ opacity: 0, scale: 0.9, y: 10 }}
+          initial={{ opacity: 0, scale: 0.92, y: 8 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9 }}
-          className="absolute pointer-events-auto z-[105]"
-          style={step.position as React.CSSProperties}
+          exit={{ opacity: 0, scale: 0.92 }}
+          transition={{ duration: 0.25 }}
+          className="absolute pointer-events-auto z-[120]"
+          style={{ left: tooltipLeft, top: tooltipTop, width: tooltipW }}
         >
-          <div className={`w-80 rounded-2xl border shadow-2xl overflow-hidden ${
-            isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'
-          }`}>
-            {/* Header */}
-            <div className="bg-gradient-to-r from-[#2563EB] to-[#10B981] p-4">
+          {/* Arrow toward the target */}
+          {rect && (
+            <div
+              className="absolute left-1/2 -translate-x-1/2 w-0 h-0"
+              style={
+                arrowDown
+                  ? {
+                    bottom: -8,
+                    borderLeft: '8px solid transparent',
+                    borderRight: '8px solid transparent',
+                    borderTop: `8px solid ${isDarkMode ? '#1e293b' : '#ffffff'}`,
+                  }
+                  : {
+                    top: -8,
+                    borderLeft: '8px solid transparent',
+                    borderRight: '8px solid transparent',
+                    borderBottom: `8px solid #2563EB`,
+                  }
+              }
+            />
+          )}
+
+          <div className={`rounded-2xl border shadow-2xl shadow-black/30 overflow-hidden ${isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'}`}>
+            {/* Gradient header */}
+            <div className="bg-gradient-to-r from-[#2563EB] to-[#10B981] px-4 py-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-white" />
                   <span className="text-white text-xs font-bold uppercase tracking-wider">Interactive Tour</span>
+                  <span className="text-white/60 text-[10px]">{tutorialStep + 1} / {STEPS.length}</span>
                 </div>
                 <button
                   onClick={() => setTutorialActive(false)}
-                  className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
+                  className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/35 transition-colors"
                 >
                   <X className="w-3 h-3 text-white" />
                 </button>
               </div>
             </div>
 
-            {/* Content */}
+            {/* Body */}
             <div className="p-4">
               <div className={`text-sm font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                 {step.title}
@@ -129,52 +327,51 @@ export default function TutorialOverlay() {
                 {step.description}
               </div>
 
-              {/* Progress */}
+              {/* Click simulation label */}
+              {step.clickLabel && (
+                <div className="mt-3 flex items-center gap-1.5">
+                  <motion.div
+                    animate={{ x: [0, 4, 0] }}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                  >
+                    <MousePointer2 className="w-3.5 h-3.5 text-[#2563EB]" fill="#2563EB" />
+                  </motion.div>
+                  <span className="text-[10px] font-semibold text-[#2563EB]">{step.clickLabel}</span>
+                </div>
+              )}
+
+              {/* Progress dots */}
               <div className="mt-4 flex items-center gap-1.5">
-                {steps.map((_, i) => (
+                {STEPS.map((_, i) => (
                   <motion.div
                     key={i}
                     animate={{ width: i === tutorialStep ? 20 : 6 }}
-                    className={`h-1.5 rounded-full transition-all ${
-                      i === tutorialStep
+                    className={`h-1.5 rounded-full ${i === tutorialStep
                         ? 'bg-gradient-to-r from-[#2563EB] to-[#10B981]'
                         : i < tutorialStep
-                        ? 'bg-[#10B981]'
-                        : isDarkMode ? 'bg-slate-700' : 'bg-slate-200'
-                    }`}
+                          ? 'bg-[#10B981]'
+                          : isDarkMode ? 'bg-slate-700' : 'bg-slate-200'
+                      }`}
                   />
                 ))}
-                <span className={`ml-1 text-[10px] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                  {tutorialStep + 1}/{steps.length}
-                </span>
               </div>
 
-              {/* Navigation */}
+              {/* Nav buttons */}
               <div className="mt-3 flex gap-2">
                 {tutorialStep > 0 && (
                   <button
-                    onClick={() => setTutorialStep(tutorialStep - 1)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-all ${
-                      isDarkMode
-                        ? 'border-slate-700 text-slate-400 hover:text-white'
-                        : 'border-slate-200 text-slate-500 hover:text-slate-700'
-                    }`}
+                    onClick={goBack}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-all ${isDarkMode ? 'border-slate-700 text-slate-400 hover:text-white' : 'border-slate-200 text-slate-500 hover:text-slate-700'
+                      }`}
                   >
-                    <ArrowLeft className="w-3 h-3" />
-                    Back
+                    <ArrowLeft className="w-3 h-3" /> Back
                   </button>
                 )}
                 <button
-                  onClick={() => {
-                    if (tutorialStep < steps.length - 1) {
-                      setTutorialStep(tutorialStep + 1);
-                    } else {
-                      setTutorialActive(false);
-                    }
-                  }}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-gradient-to-r from-[#2563EB] to-[#10B981] text-white transition-all hover:opacity-90"
+                  onClick={goNext}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-gradient-to-r from-[#2563EB] to-[#10B981] text-white hover:opacity-90 transition-opacity"
                 >
-                  {tutorialStep < steps.length - 1 ? (
+                  {tutorialStep < STEPS.length - 1 ? (
                     <>Next <ArrowRight className="w-3 h-3" /></>
                   ) : (
                     <>🎉 Finish Tour!</>
@@ -184,7 +381,7 @@ export default function TutorialOverlay() {
 
               <button
                 onClick={() => setTutorialActive(false)}
-                className={`w-full mt-2 text-[10px] text-center ${isDarkMode ? 'text-slate-600 hover:text-slate-400' : 'text-slate-400 hover:text-slate-500'} transition-colors`}
+                className={`w-full mt-2 text-[10px] text-center transition-colors ${isDarkMode ? 'text-slate-600 hover:text-slate-400' : 'text-slate-400 hover:text-slate-500'}`}
               >
                 Skip tutorial
               </button>

@@ -6,6 +6,8 @@ import AIChatbot from './components/AIChatbot';
 import TutorialOverlay from './components/TutorialOverlay';
 import ToastNotifications from './components/ToastNotifications';
 import AnomalyBanner from './components/AnomalyBanner';
+import RatingModal from './components/RatingModal';
+import FeedbackWidget from './components/FeedbackWidget';
 import DashboardPage from './pages/DashboardPage';
 import SendSMSPage from './pages/SendSMSPage';
 import ContactsPage from './pages/ContactsPage';
@@ -66,6 +68,8 @@ export default function App() {
       <TutorialOverlay />
       <ToastNotifications />
       <AnomalyBanner />
+      <RatingModal />
+      <FeedbackWidget />
     </div>
   );
 }
