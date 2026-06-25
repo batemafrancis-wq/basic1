@@ -14,6 +14,7 @@ import CampaignsPage from './pages/CampaignsPage';
 import APIPage from './pages/APIPage';
 import BillingPage from './pages/BillingPage';
 import SettingsPage from './pages/SettingsPage';
+import ReportsPage from './pages/ReportsPage';
 import GenericPage from './pages/GenericPage';
 
 export default function App() {
@@ -26,7 +27,7 @@ export default function App() {
       case 'contacts': return <ContactsPage />;
       case 'campaigns': return <CampaignsPage />;
       case 'analytics': return <AnalyticsPage />;
-      case 'reports': return <GenericPage page="reports" />;
+      case 'reports': return <ReportsPage />;
       case 'api': return <APIPage />;
       case 'billing': return <BillingPage />;
       case 'settings': return <SettingsPage />;
