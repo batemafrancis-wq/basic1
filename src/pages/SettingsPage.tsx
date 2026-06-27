@@ -48,15 +48,18 @@ const statusStyle: Record<string, string> = {
 };
 
 export default function SettingsPage() {
-  const { isDarkMode, addNotification } = useDashboardStore();
+  const { isDarkMode, addNotification, userProfile, updateUserProfile } = useDashboardStore();
 
   const [activeTab, setActiveTab] = useState<Tab>('profile');
 
-  // Profile state
+  // Profile state — initialised from store, edits local until saved
   const [profile, setProfile] = useState({
-    name: 'John Mukasa', email: 'john.mukasa@pahappa.com',
-    phone: '+256 701 234 567', company: 'Pahappa Limited',
-    website: 'https://pahappa.com', timezone: 'Africa/Kampala',
+    name: userProfile.name,
+    email: userProfile.email,
+    phone: userProfile.phone,
+    company: userProfile.company,
+    website: userProfile.website,
+    timezone: userProfile.timezone,
     language: 'English',
   });
   const [savingProfile, setSavingProfile] = useState(false);
@@ -90,6 +93,15 @@ export default function SettingsPage() {
   const saveProfile = () => {
     setSavingProfile(true);
     setTimeout(() => {
+      // Persist to store — Sidebar name, TopBar, everywhere picks it up
+      updateUserProfile({
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone,
+        company: profile.company,
+        website: profile.website,
+        timezone: profile.timezone,
+      });
       setSavingProfile(false);
       addNotification({ type: 'success', title: '✅ Profile Saved', message: 'Your account details have been updated.' });
     }, 1200);
@@ -488,8 +500,8 @@ export default function SettingsPage() {
                     <div className="flex gap-1 mb-1">
                       {[1, 2, 3, 4].map(s => (
                         <div key={s} className={`flex-1 h-1.5 rounded-full transition-all ${newPw.length >= s * 3
-                            ? s <= 1 ? 'bg-red-400' : s <= 2 ? 'bg-amber-400' : s <= 3 ? 'bg-blue-400' : 'bg-[#10B981]'
-                            : isDarkMode ? 'bg-slate-700' : 'bg-slate-200'
+                          ? s <= 1 ? 'bg-red-400' : s <= 2 ? 'bg-amber-400' : s <= 3 ? 'bg-blue-400' : 'bg-[#10B981]'
+                          : isDarkMode ? 'bg-slate-700' : 'bg-slate-200'
                           }`} />
                       ))}
                     </div>

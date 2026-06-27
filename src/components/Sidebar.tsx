@@ -20,7 +20,14 @@ const navItems: { icon: React.ElementType; label: string; page: ActivePage; badg
 ];
 
 export default function Sidebar() {
-  const { activePage, setActivePage, sidebarCollapsed, setSidebarCollapsed, isDarkMode, setTutorialActive, setTutorialStep, isChatOpen, setChatOpen } = useDashboardStore();
+  const {
+    activePage, setActivePage, sidebarCollapsed, setSidebarCollapsed,
+    isDarkMode, setTutorialActive, setTutorialStep,
+    appNotifications, setNotificationPanelOpen, isNotificationPanelOpen,
+    userProfile,
+  } = useDashboardStore();
+
+  const unread = appNotifications.filter(n => !n.read).length;
 
   return (
     <motion.aside
@@ -153,33 +160,47 @@ export default function Sidebar() {
         </button>
 
         <button
-          onClick={() => setChatOpen(!isChatOpen)}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+          onClick={() => setNotificationPanelOpen(!isNotificationPanelOpen)}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isNotificationPanelOpen
+            ? 'bg-gradient-to-r from-[#2563EB] to-[#10B981] text-white shadow-md'
+            : isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
             }`}
         >
           <Bell style={{ width: '18px', height: '18px' }} className="flex-shrink-0" />
           <AnimatePresence>
             {!sidebarCollapsed && (
-              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 text-left">
                 Notifications
               </motion.span>
             )}
           </AnimatePresence>
-          {!sidebarCollapsed && (
-            <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500 text-white">3</span>
+          {!sidebarCollapsed && unread > 0 && (
+            <motion.span
+              key={unread}
+              initial={{ scale: 0.4 }}
+              animate={{ scale: 1 }}
+              className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center ${isNotificationPanelOpen ? 'bg-white/30 text-white' : 'bg-red-500 text-white'
+                }`}
+            >
+              {unread > 9 ? '9+' : unread}
+            </motion.span>
+          )}
+          {!sidebarCollapsed && unread === 0 && (
+            <span className={`ml-auto text-[10px] font-semibold ${isNotificationPanelOpen ? 'text-white/60' : isDarkMode ? 'text-slate-600' : 'text-slate-300'
+              }`}>✓</span>
           )}
         </button>
 
         {/* User Profile */}
         <div className={`flex items-center gap-3 px-3 py-2.5 rounded-xl mt-2 ${isDarkMode ? 'bg-slate-800' : 'bg-slate-50'}`}>
           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#2563EB] to-[#10B981] flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">
-            JM
+            {userProfile.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
           </div>
           <AnimatePresence>
             {!sidebarCollapsed && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-w-0">
-                <div className={`text-xs font-semibold truncate ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>John Mukasa</div>
-                <div className="text-[10px] text-slate-400 truncate">Pro Account</div>
+                <div className={`text-xs font-semibold truncate ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>{userProfile.name}</div>
+                <div className="text-[10px] text-slate-400 truncate">{userProfile.email}</div>
               </motion.div>
             )}
           </AnimatePresence>

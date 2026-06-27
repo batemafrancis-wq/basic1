@@ -8,6 +8,8 @@ import ToastNotifications from './components/ToastNotifications';
 import AnomalyBanner from './components/AnomalyBanner';
 import RatingModal from './components/RatingModal';
 import FeedbackWidget from './components/FeedbackWidget';
+import NotificationPanel from './components/NotificationPanel';
+import AINotificationEngine from './components/AINotificationEngine';
 import DashboardPage from './pages/DashboardPage';
 import SendSMSPage from './pages/SendSMSPage';
 import ContactsPage from './pages/ContactsPage';
@@ -17,7 +19,6 @@ import APIPage from './pages/APIPage';
 import BillingPage from './pages/BillingPage';
 import SettingsPage from './pages/SettingsPage';
 import ReportsPage from './pages/ReportsPage';
-import GenericPage from './pages/GenericPage';
 
 export default function App() {
   const { isDarkMode, activePage } = useDashboardStore();
@@ -70,6 +71,8 @@ export default function App() {
       <AnomalyBanner />
       <RatingModal />
       <FeedbackWidget />
+      <NotificationPanel />
+      <AINotificationEngine />
     </div>
   );
 }

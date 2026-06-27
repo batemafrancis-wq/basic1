@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Sun, Moon, Search, Bell, Calendar, ChevronDown, Wifi } from 'lucide-react';
 import { useDashboardStore, TimePeriod } from '../store/dashboardStore';
 
@@ -21,12 +21,17 @@ const pageLabels: Record<string, string> = {
 };
 
 export default function TopBar() {
-  const { isDarkMode, toggleDarkMode, timePeriod, setTimePeriod, activePage } = useDashboardStore();
+  const {
+    isDarkMode, toggleDarkMode, timePeriod, setTimePeriod, activePage,
+    appNotifications, setNotificationPanelOpen, isNotificationPanelOpen,
+  } = useDashboardStore();
+
+  const unread = appNotifications.filter(n => !n.read).length;
 
   return (
     <header className={`sticky top-0 z-20 h-16 flex items-center justify-between px-6 border-b backdrop-blur-xl ${isDarkMode
-        ? 'bg-[#0F172A]/90 border-slate-800 text-white'
-        : 'bg-white/90 border-slate-100 text-slate-900'
+      ? 'bg-[#0F172A]/90 border-slate-800 text-white'
+      : 'bg-white/90 border-slate-100 text-slate-900'
       }`}>
       {/* Left: Page Title */}
       <div className="flex items-center gap-3">
@@ -44,8 +49,8 @@ export default function TopBar() {
       {/* Center: Period Selector */}
       <div
         className={`flex items-center gap-1 p-1 rounded-xl backdrop-blur-xl border ${isDarkMode
-            ? 'bg-slate-800/60 border-slate-700'
-            : 'bg-slate-100/80 border-slate-200/60'
+          ? 'bg-slate-800/60 border-slate-700'
+          : 'bg-slate-100/80 border-slate-200/60'
           }`}
         id="date-period-selector"
         data-tutorial="period-selector"
@@ -56,10 +61,10 @@ export default function TopBar() {
             key={p.key}
             onClick={() => setTimePeriod(p.key)}
             className={`relative px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${timePeriod === p.key
-                ? 'text-white'
-                : isDarkMode
-                  ? 'text-slate-400 hover:text-slate-200'
-                  : 'text-slate-500 hover:text-slate-700'
+              ? 'text-white'
+              : isDarkMode
+                ? 'text-slate-400 hover:text-slate-200'
+                : 'text-slate-500 hover:text-slate-700'
               }`}
             title={p.desc}
           >
@@ -79,8 +84,8 @@ export default function TopBar() {
       <div className="flex items-center gap-2">
         {/* Search */}
         <button className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition-all ${isDarkMode
-            ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
-            : 'bg-slate-50 border-slate-200 text-slate-400 hover:text-slate-700'
+          ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+          : 'bg-slate-50 border-slate-200 text-slate-400 hover:text-slate-700'
           }`}>
           <Search className="w-4 h-4" />
           <span className="text-xs hidden md:block">Search...</span>
@@ -95,21 +100,40 @@ export default function TopBar() {
           <span className="hidden md:block">Live</span>
         </div>
 
-        {/* Notifications */}
-        <button className={`relative w-9 h-9 rounded-xl flex items-center justify-center border transition-all ${isDarkMode
-            ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
-            : 'bg-slate-50 border-slate-200 text-slate-400 hover:text-slate-700'
-          }`}>
+        {/* Notifications — live count */}
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setNotificationPanelOpen(!isNotificationPanelOpen)}
+          className={`relative w-9 h-9 rounded-xl flex items-center justify-center border transition-all ${isNotificationPanelOpen
+              ? 'bg-gradient-to-br from-[#2563EB] to-[#10B981] border-transparent text-white shadow-lg shadow-blue-500/25'
+              : isDarkMode
+                ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                : 'bg-slate-50 border-slate-200 text-slate-400 hover:text-slate-700'
+            }`}
+        >
           <Bell className="w-4 h-4" />
-          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">3</span>
-        </button>
+          <AnimatePresence>
+            {unread > 0 && (
+              <motion.span
+                key={unread}
+                initial={{ scale: 0.3, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.3, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 22 }}
+                className="absolute -top-1 -right-1 min-w-[16px] h-4 px-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center"
+              >
+                {unread > 9 ? '9+' : unread}
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </motion.button>
 
         {/* Dark Mode */}
         <button
           onClick={toggleDarkMode}
           className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all ${isDarkMode
-              ? 'bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-700'
-              : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
+            ? 'bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-700'
+            : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
             }`}
         >
           {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}

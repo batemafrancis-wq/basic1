@@ -11,7 +11,6 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts';
 import { useDashboardStore } from '../store/dashboardStore';
-import { ytdData, recentCampaigns } from '../data/mockData';
 import CountUp from 'react-countup';
 
 // ── Static data ──────────────────────────────────────────────────────────────
@@ -49,13 +48,6 @@ const sparklines: Record<ReportKey, { v: number }[]> = {
   api: [300, 450, 400, 500, 480, 520, 600, 580, 640, 700, 680, 720].map(v => ({ v })),
 };
 
-const summaryStats = [
-  { label: 'Total SMS Sent (YTD)', value: 212700, suffix: '', decimals: 0, trend: +12.4, color: 'from-[#2563EB] to-blue-600', icon: MessageSquare },
-  { label: 'Avg Delivery Rate', value: 95.05, suffix: '%', decimals: 2, trend: +0.3, color: 'from-emerald-500 to-green-600', icon: CheckCircle2 },
-  { label: 'Total Spend (YTD)', value: 4254, suffix: 'K', decimals: 0, trend: +8.1, color: 'from-pink-500 to-rose-600', icon: Zap },
-  { label: 'Active Campaigns', value: 14, suffix: '', decimals: 0, trend: +2, color: 'from-violet-500 to-purple-600', icon: BarChart3 },
-];
-
 // ── Tooltip component ─────────────────────────────────────────────────────────
 const ChartTooltip = ({ active, payload, label, isDarkMode }: {
   active?: boolean; payload?: { value: number; name: string; color: string }[];
@@ -78,7 +70,10 @@ const ChartTooltip = ({ active, payload, label, isDarkMode }: {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function ReportsPage() {
-  const { isDarkMode, addNotification } = useDashboardStore();
+  const {
+    isDarkMode, addNotification,
+    campaigns, smsStats, balanceUGX, chartData,
+  } = useDashboardStore();
 
   const [selectedRange, setSelectedRange] = useState<Range>('Year to Date');
   const [selectedFormat, setSelectedFormat] = useState<Format>('PDF');
@@ -119,9 +114,18 @@ export default function ReportsPage() {
     prev.map((s, idx) => idx === i ? { ...s, active: !s.active } : s)
   );
 
-  const filteredCampaigns = recentCampaigns.filter(c =>
+  const filteredCampaigns = campaigns.filter(c =>
     tableFilter === 'all' ? true : c.status === tableFilter
   );
+
+  // Live summary KPIs
+  const totalSpendK = Math.round(balanceUGX * 17 / 1000);
+  const summaryStats = [
+    { label: 'Total SMS Sent (YTD)', value: smsStats.sent, suffix: '', decimals: 0, trend: +12.4, color: 'from-[#2563EB] to-blue-600', icon: MessageSquare },
+    { label: 'Avg Delivery Rate', value: smsStats.deliveryRate, suffix: '%', decimals: 2, trend: +0.3, color: 'from-emerald-500 to-green-600', icon: CheckCircle2 },
+    { label: 'Total Spend (YTD)', value: totalSpendK, suffix: 'K', decimals: 0, trend: +8.1, color: 'from-pink-500 to-rose-600', icon: Zap },
+    { label: 'Active Campaigns', value: campaigns.filter(c => c.status === 'running').length, suffix: '', decimals: 0, trend: +2, color: 'from-violet-500 to-purple-600', icon: BarChart3 },
+  ] as const;
 
   return (
     <div className="space-y-5">
@@ -314,7 +318,7 @@ export default function ReportsPage() {
               </div>
               <div className="h-52">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={ytdData} barCategoryGap="30%">
+                  <BarChart data={chartData} barCategoryGap="30%">
                     <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#334155' : '#f1f5f9'} vertical={false} />
                     <XAxis dataKey="month" tick={{ fill: isDarkMode ? '#94a3b8' : '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: isDarkMode ? '#94a3b8' : '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
@@ -390,7 +394,7 @@ export default function ReportsPage() {
               </div>
               <div className="h-44">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={ytdData}>
+                  <LineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#334155' : '#f1f5f9'} vertical={false} />
                     <XAxis dataKey="month" tick={{ fill: isDarkMode ? '#94a3b8' : '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: isDarkMode ? '#94a3b8' : '#64748b', fontSize: 11 }} axisLine={false} tickLine={false}

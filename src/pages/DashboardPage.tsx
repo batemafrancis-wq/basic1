@@ -82,12 +82,8 @@ export default function DashboardPage() {
           <KPICard
             key={kpi.title}
             {...kpi}
-            prefix={kpi.prefix}
-            suffix={kpi.suffix}
-            decimals={kpi.decimals}
             isDarkMode={isDarkMode}
             index={i}
-            highlight={kpi.highlight}
           />
         ))}
       </div>

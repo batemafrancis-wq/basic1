@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Users, User, Calendar, Sparkles, ChevronDown, Clock, CheckCircle2 } from 'lucide-react';
 import { useDashboardStore } from '../store/dashboardStore';
-
 const SMS_TYPES = [
   { key: 'single', label: 'Single SMS', icon: User, desc: 'Send to one number' },
   { key: 'bulk', label: 'Bulk SMS', icon: Users, desc: 'Send to many at once' },
@@ -11,7 +10,11 @@ const SMS_TYPES = [
 ];
 
 export default function SendSMSPage() {
-  const { isDarkMode, addNotification } = useDashboardStore();
+  const {
+    isDarkMode, addNotification,
+    smsCredits, balanceUGX,
+    deductCredits, updateSmsStats, addCampaign, addTransaction,
+  } = useDashboardStore();
   const [smsType, setSmsType] = useState('bulk');
   const [message, setMessage] = useState('');
   const [recipient, setRecipient] = useState('');
@@ -43,16 +46,65 @@ export default function SendSMSPage() {
       addNotification({ type: 'error', title: 'Message Required', message: 'Please enter a message before sending.' });
       return;
     }
+    const recipientCount = smsType === 'single' ? 1 : 2450;
+    const totalCredits = smsCount * recipientCount;
+
+    if (smsCredits < totalCredits) {
+      addNotification({
+        type: 'error',
+        title: 'Insufficient Credits',
+        message: `Need ${totalCredits.toLocaleString()} credits, you have ${smsCredits.toLocaleString()}.`,
+      });
+      return;
+    }
+
     setSending(true);
     setTimeout(() => {
-      setSending(false);
+      // 1. Deduct credits
+      deductCredits(totalCredits);
+
+      // 2. Update live SMS stats
+      const current = useDashboardStore.getState().smsStats;
+      updateSmsStats({
+        sent: current.sent + recipientCount,
+        delivered: current.delivered + Math.round(recipientCount * 0.9505),
+        failed: current.failed + Math.round(recipientCount * 0.0495),
+      });
+
+      // 3. Create a campaign record
+      addCampaign({
+        name: message.slice(0, 30) + (message.length > 30 ? '…' : ''),
+        sender,
+        sent: recipientCount,
+        delivered: Math.round(recipientCount * 0.9505),
+        rate: 95.05,
+        status: isScheduled ? 'scheduled' : 'completed',
+        date: isScheduled && scheduleDate
+          ? new Date(scheduleDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+          : new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+      });
+
+      // 4. Log as a billing transaction
+      addTransaction({
+        type: 'usage',
+        method: `Send SMS (${smsType}) via ${sender}`,
+        amount: -(totalCredits * 20),
+        credits: -totalCredits,
+        date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+        status: 'success',
+      });
+
+      // 5. Toast
       addNotification({
         type: 'success',
-        title: isScheduled ? '📅 Campaign Scheduled!' : '✅ SMS Sent Successfully!',
+        title: isScheduled ? '📅 Campaign Scheduled!' : '✅ SMS Sent!',
         message: isScheduled
-          ? `Scheduled for ${scheduleDate} · ${smsCount} credit(s) per recipient`
-          : `Queued to ${smsType === 'single' ? '1 recipient' : '2,450 recipients'} · ${smsCount * (smsType === 'single' ? 1 : 2450)} credits used`,
+          ? `Scheduled for ${scheduleDate} · ${totalCredits.toLocaleString()} credits reserved`
+          : `Delivered to ${recipientCount.toLocaleString()} recipients · ${totalCredits.toLocaleString()} credits used`,
+        action: { label: 'View Billing', onClick: () => useDashboardStore.getState().setActivePage('billing') },
       });
+
+      setSending(false);
       setMessage('');
     }, 1500);
   };
@@ -67,19 +119,17 @@ export default function SendSMSPage() {
             whileHover={{ y: -2 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => setSmsType(type.key)}
-            className={`p-4 rounded-2xl border text-left transition-all ${
-              smsType === type.key
-                ? 'bg-gradient-to-br from-[#2563EB]/10 to-[#10B981]/10 border-[#2563EB]/40 shadow-md'
-                : isDarkMode
+            className={`p-4 rounded-2xl border text-left transition-all ${smsType === type.key
+              ? 'bg-gradient-to-br from-[#2563EB]/10 to-[#10B981]/10 border-[#2563EB]/40 shadow-md'
+              : isDarkMode
                 ? 'bg-[#1E293B] border-slate-700 hover:border-slate-600'
                 : 'bg-white border-slate-200 hover:border-slate-300'
-            }`}
+              }`}
           >
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2.5 ${
-              smsType === type.key
-                ? 'bg-gradient-to-br from-[#2563EB] to-[#10B981]'
-                : isDarkMode ? 'bg-slate-700' : 'bg-slate-100'
-            }`}>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2.5 ${smsType === type.key
+              ? 'bg-gradient-to-br from-[#2563EB] to-[#10B981]'
+              : isDarkMode ? 'bg-slate-700' : 'bg-slate-100'
+              }`}>
               <type.icon className={`w-4 h-4 ${smsType === type.key ? 'text-white' : isDarkMode ? 'text-slate-400' : 'text-slate-500'}`} />
             </div>
             <div className={`text-xs font-bold ${smsType === type.key ? 'text-[#2563EB]' : isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
@@ -120,16 +170,14 @@ export default function SendSMSPage() {
                   value={recipient}
                   onChange={(e) => setRecipient(e.target.value)}
                   placeholder="+256 7XX XXX XXX"
-                  className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none transition-all ${
-                    isDarkMode
-                      ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-600 focus:border-blue-500'
-                      : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-blue-400'
-                  }`}
+                  className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none transition-all ${isDarkMode
+                    ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-600 focus:border-blue-500'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-blue-400'
+                    }`}
                 />
               ) : (
-                <div className={`flex items-center justify-between px-4 py-3 rounded-xl border cursor-pointer ${
-                  isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'
-                }`}>
+                <div className={`flex items-center justify-between px-4 py-3 rounded-xl border cursor-pointer ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'
+                  }`}>
                   <div>
                     <div className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>All Contacts (8,420)</div>
                     <div className={`text-[10px] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>or select a group</div>
@@ -156,11 +204,10 @@ export default function SendSMSPage() {
                 onChange={(e) => setMessage(e.target.value)}
                 rows={5}
                 placeholder="Type your message here... Use {name} for personalization"
-                className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none transition-all ${
-                  isDarkMode
-                    ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-600 focus:border-blue-500'
-                    : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-blue-400'
-                }`}
+                className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none transition-all ${isDarkMode
+                  ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-600 focus:border-blue-500'
+                  : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-blue-400'
+                  }`}
               />
               <div className={`flex items-center justify-between mt-1.5 text-[10px] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
                 <span>{charCount} characters · {smsCount} SMS</span>
@@ -194,9 +241,8 @@ export default function SendSMSPage() {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.1 }}
                         onClick={() => { setMessage(s); setShowAISuggest(false); }}
-                        className={`w-full text-left text-xs p-3 rounded-xl border transition-all hover:border-[#2563EB]/40 ${
-                          isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-                        }`}
+                        className={`w-full text-left text-xs p-3 rounded-xl border transition-all hover:border-[#2563EB]/40 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+                          }`}
                       >
                         {s}
                       </motion.button>
@@ -238,9 +284,8 @@ export default function SendSMSPage() {
                     type="datetime-local"
                     value={scheduleDate}
                     onChange={(e) => setScheduleDate(e.target.value)}
-                    className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none ${
-                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
+                    className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                      }`}
                   />
                 </motion.div>
               )}
@@ -309,10 +354,16 @@ export default function SendSMSPage() {
               ))}
             </div>
             <div className={`mt-3 pt-3 border-t ${isDarkMode ? 'border-slate-700' : 'border-slate-100'}`}>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 mb-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />
                 <span className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                  Balance: <strong className={isDarkMode ? 'text-green-400' : 'text-green-600'}>UGX 245,000</strong>
+                  Balance: <strong className={isDarkMode ? 'text-green-400' : 'text-green-600'}>UGX {balanceUGX.toLocaleString()}</strong>
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#2563EB]" />
+                <span className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                  Credits: <strong className={isDarkMode ? 'text-blue-400' : 'text-[#2563EB]'}>{smsCredits.toLocaleString()}</strong>
                 </span>
               </div>
             </div>

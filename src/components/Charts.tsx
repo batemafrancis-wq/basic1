@@ -5,14 +5,13 @@ import {
   ReferenceLine
 } from 'recharts';
 import { useDashboardStore } from '../store/dashboardStore';
-import { mtdData, ytdData, rolling90Data, deliveryRateData, networkBreakdown } from '../data/mockData';
+import { deliveryRateData, networkBreakdown } from '../data/mockData';
 
 const CustomTooltip = ({ active, payload, label, isDark }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className={`p-3 rounded-xl border shadow-xl backdrop-blur-xl ${
-        isDark ? 'bg-slate-900/95 border-slate-700 text-white' : 'bg-white/95 border-slate-200 text-slate-900'
-      }`}>
+      <div className={`p-3 rounded-xl border shadow-xl backdrop-blur-xl ${isDark ? 'bg-slate-900/95 border-slate-700 text-white' : 'bg-white/95 border-slate-200 text-slate-900'
+        }`}>
         <p className={`text-xs font-bold mb-2 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{label}</p>
         {payload.map((p: any, i: number) => (
           <div key={i} className="flex items-center gap-2 text-xs">
@@ -28,8 +27,8 @@ const CustomTooltip = ({ active, payload, label, isDark }: any) => {
 };
 
 export function SMSVolumeChart() {
-  const { timePeriod, isDarkMode, setHoveredMonth, hoveredMonth } = useDashboardStore();
-  const data = timePeriod === 'mtd' ? mtdData : timePeriod === 'ytd' ? ytdData : rolling90Data;
+  const { timePeriod, isDarkMode, setHoveredMonth, hoveredMonth, chartData } = useDashboardStore();
+  const data = chartData;
 
   return (
     <motion.div
@@ -37,9 +36,8 @@ export function SMSVolumeChart() {
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.4 }}
-      className={`rounded-2xl border p-5 ${
-        isDarkMode ? 'bg-[#1E293B] border-slate-700/60' : 'bg-white border-slate-200/60'
-      } shadow-sm`}
+      className={`rounded-2xl border p-5 ${isDarkMode ? 'bg-[#1E293B] border-slate-700/60' : 'bg-white border-slate-200/60'
+        } shadow-sm`}
     >
       <div className="flex items-center justify-between mb-5">
         <div>
@@ -61,7 +59,7 @@ export function SMSVolumeChart() {
         <BarChart data={data} onMouseMove={(e) => e.activeLabel && setHoveredMonth(String(e.activeLabel))} onMouseLeave={() => setHoveredMonth(null)}>
           <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#1e293b' : '#f1f5f9'} vertical={false} />
           <XAxis dataKey="month" tick={{ fill: isDarkMode ? '#64748b' : '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fill: isDarkMode ? '#64748b' : '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={45} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
+          <YAxis tick={{ fill: isDarkMode ? '#64748b' : '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={45} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v} />
           <Tooltip content={<CustomTooltip isDark={isDarkMode} />} />
           <Bar dataKey="sent" name="Sent" fill="#2563EB" radius={[4, 4, 0, 0]} opacity={0.85} />
           <Bar dataKey="delivered" name="Delivered" fill="#10B981" radius={[4, 4, 0, 0]} />
@@ -81,9 +79,8 @@ export function DeliveryRateChart() {
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.4, delay: 0.1 }}
-      className={`rounded-2xl border p-5 ${
-        isDarkMode ? 'bg-[#1E293B] border-slate-700/60' : 'bg-white border-slate-200/60'
-      } shadow-sm`}
+      className={`rounded-2xl border p-5 ${isDarkMode ? 'bg-[#1E293B] border-slate-700/60' : 'bg-white border-slate-200/60'
+        } shadow-sm`}
     >
       <div className="flex items-center justify-between mb-5">
         <div>
@@ -127,9 +124,8 @@ export function NetworkPieChart() {
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.4, delay: 0.2 }}
-      className={`rounded-2xl border p-5 ${
-        isDarkMode ? 'bg-[#1E293B] border-slate-700/60' : 'bg-white border-slate-200/60'
-      } shadow-sm`}
+      className={`rounded-2xl border p-5 ${isDarkMode ? 'bg-[#1E293B] border-slate-700/60' : 'bg-white border-slate-200/60'
+        } shadow-sm`}
     >
       <div className="mb-5">
         <h3 className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Network Distribution</h3>
@@ -186,8 +182,8 @@ export function NetworkPieChart() {
 }
 
 export function CostTrendChart() {
-  const { timePeriod, isDarkMode } = useDashboardStore();
-  const data = timePeriod === 'mtd' ? mtdData : timePeriod === 'ytd' ? ytdData : rolling90Data;
+  const { timePeriod, isDarkMode, chartData } = useDashboardStore();
+  const data = chartData;
 
   return (
     <motion.div
@@ -195,9 +191,8 @@ export function CostTrendChart() {
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.4, delay: 0.15 }}
-      className={`rounded-2xl border p-5 ${
-        isDarkMode ? 'bg-[#1E293B] border-slate-700/60' : 'bg-white border-slate-200/60'
-      } shadow-sm`}
+      className={`rounded-2xl border p-5 ${isDarkMode ? 'bg-[#1E293B] border-slate-700/60' : 'bg-white border-slate-200/60'
+        } shadow-sm`}
     >
       <div className="flex items-center justify-between mb-5">
         <div>

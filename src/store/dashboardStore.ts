@@ -57,6 +57,22 @@ export interface Notification {
   action?: { label: string; onClick: () => void };
 }
 
+// ── AI Notification (rich — bell panel) ───────────────────────────────────────
+export interface AppNotification {
+  id: string;
+  type: 'critical' | 'warning' | 'info' | 'success' | 'prediction';
+  category: 'balance' | 'delivery' | 'campaign' | 'contacts' | 'api' | 'system' | 'billing';
+  title: string;
+  summary: string;       // one-liner shown in panel list
+  cause: string;         // why this happened
+  prediction: string;    // what will happen if ignored
+  solution: string;      // recommended action
+  read: boolean;
+  timestamp: Date;
+  actionLabel?: string;
+  actionPage?: ActivePage;
+}
+
 // ── Store interface ───────────────────────────────────────────────────────────
 
 interface DashboardState {
@@ -82,6 +98,16 @@ interface DashboardState {
   notifications: Notification[];
   addNotification: (n: Omit<Notification, 'id'>) => void;
   removeNotification: (id: string) => void;
+
+  // ── AI Notifications (bell panel) ───────────────────────────────────────
+  appNotifications: AppNotification[];
+  addAppNotification: (n: Omit<AppNotification, 'id' | 'read' | 'timestamp'>) => void;
+  markAppNotificationRead: (id: string) => void;
+  markAllAppNotificationsRead: () => void;
+  dismissAppNotification: (id: string) => void;
+  clearAllAppNotifications: () => void;
+  isNotificationPanelOpen: boolean;
+  setNotificationPanelOpen: (open: boolean) => void;
 
   // ── LIVE DATA ────────────────────────────────────────────────
 
@@ -117,6 +143,13 @@ interface DashboardState {
   pendingRating: { activityLabel: string; onRate: (stars: number, comment: string) => void } | null;
   requestRating: (activityLabel: string, onRate: (stars: number, comment: string) => void) => void;
   clearRating: () => void;
+
+  // User profile (persisted in store so Settings + Sidebar stay in sync)
+  userProfile: {
+    name: string; email: string; phone: string;
+    company: string; website: string; timezone: string;
+  };
+  updateUserProfile: (patch: Partial<DashboardState['userProfile']>) => void;
 }
 
 // ── Seed transactions ─────────────────────────────────────────────────────────
@@ -163,6 +196,38 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     })),
   removeNotification: (id) =>
     set((s) => ({ notifications: s.notifications.filter((n) => n.id !== id) })),
+
+  // AI Notifications
+  appNotifications: [],
+  addAppNotification: (n) =>
+    set((s) => ({
+      appNotifications: [
+        {
+          ...n,
+          id: Math.random().toString(36).slice(2),
+          read: false,
+          timestamp: new Date(),
+        },
+        ...s.appNotifications,
+      ].slice(0, 50), // keep latest 50
+    })),
+  markAppNotificationRead: (id) =>
+    set((s) => ({
+      appNotifications: s.appNotifications.map((n) =>
+        n.id === id ? { ...n, read: true } : n
+      ),
+    })),
+  markAllAppNotificationsRead: () =>
+    set((s) => ({
+      appNotifications: s.appNotifications.map((n) => ({ ...n, read: true })),
+    })),
+  dismissAppNotification: (id) =>
+    set((s) => ({
+      appNotifications: s.appNotifications.filter((n) => n.id !== id),
+    })),
+  clearAllAppNotifications: () => set({ appNotifications: [] }),
+  isNotificationPanelOpen: false,
+  setNotificationPanelOpen: (open) => set({ isNotificationPanelOpen: open }),
 
   // Balance
   balanceUGX: 245000,
@@ -216,4 +281,16 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   pendingRating: null,
   requestRating: (activityLabel, onRate) => set({ pendingRating: { activityLabel, onRate } }),
   clearRating: () => set({ pendingRating: null }),
+
+  // User profile
+  userProfile: {
+    name: 'John Mukasa',
+    email: 'john.mukasa@pahappa.com',
+    phone: '+256 701 234 567',
+    company: 'Pahappa Limited',
+    website: 'https://pahappa.com',
+    timezone: 'Africa/Kampala',
+  },
+  updateUserProfile: (patch) =>
+    set((s) => ({ userProfile: { ...s.userProfile, ...patch } })),
 }));
